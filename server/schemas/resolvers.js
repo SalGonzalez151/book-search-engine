@@ -1,10 +1,13 @@
 const { Book, User } = require('../models');
-const { signToken } = require('../utils/auth');
+const { signToken, AuthenticationError } = require('../utils/auth');
 
 const resolvers = {
     Query: {
-        me: async () => {
-            return User.findOne({ username})
+        me: async (parent, args, context) => {
+            if (context.user) {
+            return User.findOne({ _id: context.user._id})
+        }
+           throw AuthenticationError
         }
     },
     Mutation: {
@@ -29,24 +32,30 @@ const resolvers = {
             const token = signToken(user);
             return {token, user} ;
         },
-        deleteBook: async (parent, { bookId } ) => {
-            const book = await Book.findOneAndDelete({
-                _id:bookId
-            })
-
-            return book;
-        
-        
-        },
-        saveBook: async (parent, args) => {
-            const book = await Book.findOneAndUpdate({
-                _id: args.id
+        deleteBook: async (parent, { bookId }, context ) => {
+            if (context.user) {
+            return User.findOneAndUpdate({
+                _id:context.user._id
             },
             {
-               $set: {authors: args.authors, description: args.description, bookId: args.bookId, image: args.image, link: args.link, title: args.title}
+                $pull: {savedBooks: {bookId}}    
+            },
+            {new: true})
 
-            })
-            return book;
+            
+            }
+            throw AuthenticationError;
+        },
+        saveBook: async (parent, {bookData}, context) => {
+            if (context.user) {
+                const updatedUser = await User.findByIdAndUpdate(
+                    {_id: context.user._id},
+                    {$push: {savedBooks: bookData}},
+                    {new: true}
+                )
+                return updatedUser;
+            }
+            throw AuthenticationError
         }
     }
 }
