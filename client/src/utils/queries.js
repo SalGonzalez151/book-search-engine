@@ -1,6 +1,7 @@
 export const QUERY_ME = `
-query queryMe {
+  query me {
     me {
+      _id
       username
       email
       savedBooks {
@@ -13,4 +14,4 @@ query queryMe {
       }
     }
   }
-`
+`;
